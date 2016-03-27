@@ -1,3 +1,4 @@
 maxxc
 *.o
 .*.swp
+*.pro.*
