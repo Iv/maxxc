@@ -1,6 +1,5 @@
 TEMPLATE = subdirs
-SUBDIRS = maxxc \ 
-    cunit
+SUBDIRS = xc cunit
 
 
 
