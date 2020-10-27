@@ -1,4 +1,5 @@
 maxxc
+.idea
 *.o
 .*.swp
 *.pro.*

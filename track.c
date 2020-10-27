@@ -24,9 +24,8 @@
 #include <string.h>
 #include "maxxc.h"
 
-    void
-trkpt_to_wpt(const trkpt_t *trkpt, wpt_t *wpt)
-{
+void
+trkpt_to_wpt(const trkpt_t *trkpt, wpt_t *wpt) {
     wpt->lat = trkpt->lat;
     wpt->lon = trkpt->lon;
     wpt->time = trkpt->time;
@@ -36,33 +35,29 @@ trkpt_to_wpt(const trkpt_t *trkpt, wpt_t *wpt)
 }
 
 __attribute__ ((nonnull(1, 2))) __attribute__ ((pure))
-    static inline double
-coord_delta(const coord_t *coord1, const coord_t *coord2)
-{
+static inline double
+coord_delta(const coord_t *coord1, const coord_t *coord2) {
     double x = coord1->sin_lat * coord2->sin_lat + coord1->cos_lat * coord2->cos_lat * cos(coord1->lon - coord2->lon);
     return x < 1.0 ? acos(x) : 0.0;
 
 }
 
 __attribute__ ((nonnull(1))) __attribute__ ((pure))
-    static inline double
-track_delta(const track_t *track, int i, int j)
-{
+static inline double
+track_delta(const track_t *track, int i, int j) {
     return coord_delta(track->coords + i, track->coords + j);
 }
 
 __attribute__ ((nonnull(1))) __attribute__ ((pure))
-    static inline int
-track_forward(const track_t *track, int i, double d)
-{
+static inline int
+track_forward(const track_t *track, int i, double d) {
     int step = (int) (d / track->max_delta);
     return step > 0 ? i + step : ++i;
 }
 
 __attribute__ ((nonnull(1))) __attribute__ ((pure))
-    static inline int
-track_fast_forward(const track_t *track, int i, double d)
-{
+static inline int
+track_fast_forward(const track_t *track, int i, double d) {
     double target = track->sigma_delta[i] + d;
     i = track_forward(track, i, d);
     if (i >= track->ntrkpts)
@@ -78,17 +73,15 @@ track_fast_forward(const track_t *track, int i, double d)
 }
 
 __attribute__ ((nonnull(1))) __attribute__ ((pure))
-    static inline int
-track_backward(const track_t *track, int i, double d)
-{
+static inline int
+track_backward(const track_t *track, int i, double d) {
     int step = (int) (d / track->max_delta);
     return step > 0 ? i - step : --i;
 }
 
 __attribute__ ((nonnull(1))) __attribute__ ((pure))
-    static inline int
-track_fast_backward(const track_t *track, int i, double d)
-{
+static inline int
+track_fast_backward(const track_t *track, int i, double d) {
     double target = track->sigma_delta[i] - d;
     i = track_backward(track, i, d);
     if (i < 0)
@@ -104,11 +97,10 @@ track_fast_backward(const track_t *track, int i, double d)
 }
 
 __attribute__ ((nonnull(1))) __attribute__ ((pure))
-    static inline int
-track_furthest_from(const track_t *track, int i, int begin, int end, double bound, double *out)
-{
+static inline int
+track_furthest_from(const track_t *track, int i, int begin, int end, double bound, double *out) {
     int result = -1;
-    for (int j = begin; j < end; ) {
+    for (int j = begin; j < end;) {
         double d = track_delta(track, i, j);
         if (d > bound) {
             bound = *out = d;
@@ -122,11 +114,10 @@ track_furthest_from(const track_t *track, int i, int begin, int end, double boun
 }
 
 __attribute__ ((nonnull(1))) __attribute__ ((pure))
-    static inline int
-track_nearest_to(const track_t *track, int i, int begin, int end, double bound, double *out)
-{
+static inline int
+track_nearest_to(const track_t *track, int i, int begin, int end, double bound, double *out) {
     int result = -1;
-    for (int j = begin; j < end; ) {
+    for (int j = begin; j < end;) {
         double d = track_delta(track, i, j);
         if (d < bound) {
             result = j;
@@ -139,12 +130,11 @@ track_nearest_to(const track_t *track, int i, int begin, int end, double bound, 
     return result;
 }
 
-    static inline int
+static inline int
 __attribute__ ((nonnull(1))) __attribute__ ((pure))
-track_furthest_from2(const track_t *track, int i, int j, int begin, int end, double bound, double *out)
-{
+track_furthest_from2(const track_t *track, int i, int j, int begin, int end, double bound, double *out) {
     int result = -1;
-    for (int k = begin; k < end; ) {
+    for (int k = begin; k < end;) {
         double d = track_delta(track, i, k) + track_delta(track, k, j);
         if (d > bound) {
             result = k;
@@ -157,11 +147,10 @@ track_furthest_from2(const track_t *track, int i, int j, int begin, int end, dou
     return result;
 }
 
-    static inline int
+static inline int
 __attribute__ ((nonnull(1))) __attribute__ ((pure))
-track_first_at_least(const track_t *track, int i, int begin, int end, double bound)
-{
-    for (int j = begin; j < end; ) {
+track_first_at_least(const track_t *track, int i, int begin, int end, double bound) {
+    for (int j = begin; j < end;) {
         double d = track_delta(track, i, j);
         if (d > bound)
             return j;
@@ -171,10 +160,9 @@ track_first_at_least(const track_t *track, int i, int begin, int end, double bou
 }
 
 __attribute__ ((nonnull(1))) __attribute__ ((pure))
-    static inline int
-track_last_at_least(const track_t *track, int i, int begin, int end, double bound)
-{
-    for (int j = end - 1; j >= begin; ) {
+static inline int
+track_last_at_least(const track_t *track, int i, int begin, int end, double bound) {
+    for (int j = end - 1; j >= begin;) {
         double d = track_delta(track, i, j);
         if (d > bound)
             return j;
@@ -184,34 +172,31 @@ track_last_at_least(const track_t *track, int i, int begin, int end, double boun
 }
 
 __attribute__ ((nonnull(1, 2))) __attribute__ ((pure))
-    static inline int
-track_first_inside(const track_t *track, const coord_t *coord, double radius, int begin, int end)
-{
-    for (int i = begin; i < end; ) {
-	double d = coord_delta(coord, track->coords + i);
-	if (d <= radius)
-	    return i;
-	i = track_forward(track, i, d - radius);
+static inline int
+track_first_inside(const track_t *track, const coord_t *coord, double radius, int begin, int end) {
+    for (int i = begin; i < end;) {
+        double d = coord_delta(coord, track->coords + i);
+        if (d <= radius)
+            return i;
+        i = track_forward(track, i, d - radius);
     }
     return -1;
 }
 
 __attribute__ ((nonnull(1, 2))) __attribute__ ((pure))
-    static inline int
-track_first_outside(const track_t *track, const coord_t *coord, double radius, int begin, int end)
-{
-    for (int i = begin; i < end; ) {
-	double d = coord_delta(coord, track->coords + i);
-	if (d > radius)
-	    return i;
-	i = track_forward(track, i, d - radius);
+static inline int
+track_first_outside(const track_t *track, const coord_t *coord, double radius, int begin, int end) {
+    for (int i = begin; i < end;) {
+        double d = coord_delta(coord, track->coords + i);
+        if (d > radius)
+            return i;
+        i = track_forward(track, i, d - radius);
     }
     return -1;
 }
 
-    static void
-track_initialize(track_t *track)
-{
+static void
+track_initialize(track_t *track) {
     track->coords = alloc(track->ntrkpts * sizeof(coord_t));
 #pragma omp parallel for schedule(static)
     for (int i = 0; i < track->ntrkpts; ++i) {
@@ -239,7 +224,9 @@ track_initialize(track_t *track)
             track->before[0].index = 0;
             track->before[0].distance = 0.0;
             for (int i = 1; i < track->ntrkpts; ++i)
-                track->before[i].index = track_furthest_from(track, i, 0, i, track->before[i - 1].distance - track->max_delta, &track->before[i].distance);
+                track->before[i].index = track_furthest_from(track, i, 0, i,
+                                                             track->before[i - 1].distance - track->max_delta,
+                                                             &track->before[i].distance);
         }
 #pragma omp section
         {
@@ -247,21 +234,22 @@ track_initialize(track_t *track)
             track->after = alloc(track->ntrkpts * sizeof(limit_t));
             track->after[0].index = track_furthest_from(track, 0, 1, track->ntrkpts, 0.0, &track->after[0].distance);
             for (int i = 1; i < track->ntrkpts - 1; ++i)
-                track->after[i].index = track_furthest_from(track, i, i + 1, track->ntrkpts, track->after[i - 1].distance - track->max_delta, &track->after[i].distance);
+                track->after[i].index = track_furthest_from(track, i, i + 1, track->ntrkpts,
+                                                            track->after[i - 1].distance - track->max_delta,
+                                                            &track->after[i].distance);
             track->after[track->ntrkpts - 1].index = track->ntrkpts - 1;
             track->after[track->ntrkpts - 1].distance = 0.0;
         }
     }
 }
 
-    void
-track_compute_circuit_tables(track_t *track, double circuit_bound)
-{
+void
+track_compute_circuit_tables(track_t *track, double circuit_bound) {
     track->last_finish = alloc(track->ntrkpts * sizeof(int));
     track->best_start = alloc(track->ntrkpts * sizeof(int));
     int current_best_start = 0, i, j;
     for (i = 0; i < track->ntrkpts; ++i) {
-        for (j = track->ntrkpts - 1; j >= i; ) {
+        for (j = track->ntrkpts - 1; j >= i;) {
             double error = track_delta(track, i, j);
             if (error < circuit_bound) {
                 track->last_finish[i] = j;
@@ -282,16 +270,14 @@ track_compute_circuit_tables(track_t *track, double circuit_bound)
     }
 }
 
-    static inline const char *
-match_char(const char *p, char c)
-{
+static inline const char *
+match_char(const char *p, char c) {
     if (!p) return 0;
     return *p == c ? ++p : 0;
 }
 
-    static inline const char *
-match_string(const char *p, const char *s)
-{
+static inline const char *
+match_string(const char *p, const char *s) {
     if (!p) return 0;
     while (*p && *s && *p == *s) {
         ++p;
@@ -300,9 +286,8 @@ match_string(const char *p, const char *s)
     return *s ? 0 : p;
 }
 
-    static inline const char *
-match_unsigned(const char *p, int n, int *result)
-{
+static inline const char *
+match_unsigned(const char *p, int n, int *result) {
     if (!p) return 0;
     *result = 0;
     for (; n > 0; --n) {
@@ -316,9 +301,8 @@ match_unsigned(const char *p, int n, int *result)
     return p;
 }
 
-    static inline const char *
-match_one_of(const char *p, const char *s, char *result)
-{
+static inline const char *
+match_one_of(const char *p, const char *s, char *result) {
     if (!p) return 0;
     for (; *s; ++s)
         if (*p == *s) {
@@ -328,9 +312,8 @@ match_one_of(const char *p, const char *s, char *result)
     return 0;
 }
 
-    static inline const char *
-match_capture_until(const char *p, char c, char **result)
-{
+static inline const char *
+match_capture_until(const char *p, char c, char **result) {
     if (!p) return 0;
     const char *start = p;
     while (*p && *p != c)
@@ -342,9 +325,8 @@ match_capture_until(const char *p, char c, char **result)
     return p;
 }
 
-    static inline const char *
-match_until_eol(const char *p)
-{
+static inline const char *
+match_until_eol(const char *p) {
     if (!p) return 0;
     while (*p && *p != '\r')
         ++p;
@@ -353,9 +335,8 @@ match_until_eol(const char *p)
     return *p == '\n' ? ++p : 0;
 }
 
-    static const char *
-match_b_record(const char *p, struct tm *tm, trkpt_t *trkpt)
-{
+static const char *
+match_b_record(const char *p, struct tm *tm, trkpt_t *trkpt) {
     p = match_char(p, 'B');
     if (!p) return 0;
 
@@ -408,9 +389,8 @@ match_b_record(const char *p, struct tm *tm, trkpt_t *trkpt)
     return p;
 }
 
-    static const char *
-match_c_record(const char *p, wpt_t *wpt)
-{
+static const char *
+match_c_record(const char *p, wpt_t *wpt) {
     p = match_char(p, 'C');
     if (!p) return 0;
 
@@ -446,9 +426,8 @@ match_c_record(const char *p, wpt_t *wpt)
     return p;
 }
 
-    static const char *
-match_hfdte_record(const char *p, struct tm *tm)
-{
+static const char *
+match_hfdte_record(const char *p, struct tm *tm) {
     int mday = 0, mon = 0, year = 0;
     p = match_string(p, "HFDTE");
     if (!p) return 0;
@@ -463,9 +442,8 @@ match_hfdte_record(const char *p, struct tm *tm)
     return p;
 }
 
-    static void
-track_push_trkpt(track_t *track, const trkpt_t *trkpt)
-{
+static void
+track_push_trkpt(track_t *track, const trkpt_t *trkpt) {
     if (track->ntrkpts == track->trkpts_capacity) {
         track->trkpts_capacity = track->trkpts_capacity ? 2 * track->trkpts_capacity : 16384;
         track->trkpts = realloc(track->trkpts, track->trkpts_capacity * sizeof(trkpt_t));
@@ -476,9 +454,8 @@ track_push_trkpt(track_t *track, const trkpt_t *trkpt)
     ++track->ntrkpts;
 }
 
-    static void
-track_push_task_wpt(track_t *track, const wpt_t *task_wpt)
-{
+static void
+track_push_task_wpt(track_t *track, const wpt_t *task_wpt) {
     if (track->ntask_wpts == track->task_wpts_capacity) {
         track->task_wpts_capacity = track->task_wpts_capacity ? 2 * track->task_wpts_capacity : 16;
         track->task_wpts = realloc(track->task_wpts, track->task_wpts_capacity * sizeof(wpt_t));
@@ -489,9 +466,8 @@ track_push_task_wpt(track_t *track, const wpt_t *task_wpt)
     ++track->ntask_wpts;
 }
 
-    track_t *
-track_new_from_igc(const char *filename, FILE *file)
-{
+track_t *
+track_new_from_igc(const char *filename, FILE *file) {
     track_t *track = alloc(sizeof(track_t));
     track->filename = filename;
 
@@ -530,9 +506,8 @@ track_new_from_igc(const char *filename, FILE *file)
     return track;
 }
 
-    void
-track_delete(track_t *track)
-{
+void
+track_delete(track_t *track) {
     if (track) {
         free(track->trkpts);
         if (track->task_wpts) {
@@ -551,9 +526,8 @@ track_delete(track_t *track)
     }
 }
 
-    static double
-track_open_distance(const track_t *track, double bound, int *indexes)
-{
+static double
+track_open_distance(const track_t *track, double bound, int *indexes) {
     indexes[0] = indexes[1] = -1;
     for (int start = 0; start < track->ntrkpts - 1; ++start) {
         int finish = track_furthest_from(track, start, start + 1, track->ntrkpts, bound, &bound);
@@ -565,11 +539,10 @@ track_open_distance(const track_t *track, double bound, int *indexes)
     return bound;
 }
 
-    static double
-track_open_distance1(const track_t *track, double bound, int *indexes)
-{
+static double
+track_open_distance1(const track_t *track, double bound, int *indexes) {
     indexes[0] = indexes[1] = indexes[2] = -1;
-    for (int tp1 = 1; tp1 < track->ntrkpts - 1; ) {
+    for (int tp1 = 1; tp1 < track->ntrkpts - 1;) {
         double total = track->before[tp1].distance + track->after[tp1].distance;
         if (total > bound) {
             indexes[0] = track->before[tp1].index;
@@ -584,14 +557,13 @@ track_open_distance1(const track_t *track, double bound, int *indexes)
     return bound;
 }
 
-    static double
-track_open_distance2(const track_t *track, double bound, int *indexes)
-{
+static double
+track_open_distance2(const track_t *track, double bound, int *indexes) {
     indexes[0] = indexes[1] = indexes[2] = indexes[3] = -1;
 #pragma omp parallel for schedule(dynamic)
     for (int tp1 = 1; tp1 < track->ntrkpts - 2; ++tp1) {
         double leg1 = track->before[tp1].distance;
-        for (int tp2 = tp1 + 1; tp2 < track->ntrkpts - 1; ) {
+        for (int tp2 = tp1 + 1; tp2 < track->ntrkpts - 1;) {
             double distance = leg1 + track_delta(track, tp1, tp2) + track->after[tp2].distance;
             int new_bound = 0;
 #pragma omp critical
@@ -612,16 +584,15 @@ track_open_distance2(const track_t *track, double bound, int *indexes)
     return bound;
 }
 
-    static double
-track_open_distance3(const track_t *track, double bound, int *indexes)
-{
+static double
+track_open_distance3(const track_t *track, double bound, int *indexes) {
     indexes[0] = indexes[1] = indexes[2] = indexes[3] = indexes[4] = -1;
 #pragma omp parallel for schedule(dynamic)
     for (int tp1 = 1; tp1 < track->ntrkpts - 3; ++tp1) {
         double leg1 = track->before[tp1].distance;
         for (int tp2 = tp1 + 1; tp2 < track->ntrkpts - 2; ++tp2) {
             double leg2 = track_delta(track, tp1, tp2);
-            for (int tp3 = tp2 + 1; tp3 < track->ntrkpts - 1; ) {
+            for (int tp3 = tp2 + 1; tp3 < track->ntrkpts - 1;) {
                 double distance = leg1 + leg2 + track_delta(track, tp2, tp3) + track->after[tp3].distance;
                 int new_bound = 0;
 #pragma omp critical
@@ -644,9 +615,8 @@ track_open_distance3(const track_t *track, double bound, int *indexes)
     return bound;
 }
 
-    static double
-track_frcfd_aller_retour(const track_t *track, double bound, int *indexes)
-{
+static double
+track_frcfd_aller_retour(const track_t *track, double bound, int *indexes) {
     bound /= 2.0;
     indexes[0] = indexes[1] = indexes[2] = indexes[3] = -1;
 #pragma omp parallel for schedule(dynamic)
@@ -674,12 +644,13 @@ track_frcfd_aller_retour(const track_t *track, double bound, int *indexes)
     return 2.0 * bound;
 }
 
-    static double
-track_frcfd_triangle_fai(const track_t *track, double bound, int *indexes)
-{
+static double
+track_frcfd_triangle_fai(const track_t *track, double bound, int *indexes) {
     indexes[0] = indexes[1] = indexes[2] = indexes[3] = indexes[4] = -1;
     double legbound = 0.28 * bound;
+
     int tp1;
+#pragma omp parallel for schedule(dynamic)
     for (tp1 = 0; tp1 < track->ntrkpts - 2; ++tp1) {
         int start = track->best_start[tp1];
         int finish = track->last_finish[start];
@@ -692,7 +663,7 @@ track_frcfd_triangle_fai(const track_t *track, double bound, int *indexes)
         if (tp3last < 0)
             continue;
         int tp3;
-        for (tp3 = tp3last; tp3 >= tp3first; ) {
+        for (tp3 = tp3last; tp3 >= tp3first;) {
             double leg3 = track_delta(track, tp3, tp1);
             if (leg3 < legbound) {
                 tp3 = track_fast_backward(track, tp3, legbound - leg3);
@@ -711,7 +682,7 @@ track_frcfd_triangle_fai(const track_t *track, double bound, int *indexes)
             }
             double longestlegbound = 0.44 * leg3 / 0.28;
             int tp2;
-            for (tp2 = tp2first; tp2 <= tp2last; ) {
+            for (tp2 = tp2first; tp2 <= tp2last;) {
                 double d = 0.0;
                 double leg1 = track_delta(track, tp1, tp2);
                 if (leg1 < shortestlegbound)
@@ -739,32 +710,34 @@ track_frcfd_triangle_fai(const track_t *track, double bound, int *indexes)
                     tp2 = track_fast_forward(track, tp2, 0.5 * d);
                     continue;
                 }
+#pragma omp critical
                 if (total < bound) {
                     tp2 = track_fast_forward(track, tp2, 0.5 * (bound - total));
-                    continue;
+                } else {
+                    bound = total;
+                    legbound = thislegbound;
+                    indexes[0] = start;
+                    indexes[1] = tp1;
+                    indexes[2] = tp2;
+                    indexes[3] = tp3;
+                    indexes[4] = finish;
+                    ++tp2;
                 }
-                bound = total;
-                legbound = thislegbound;
-                indexes[0] = start;
-                indexes[1] = tp1;
-                indexes[2] = tp2;
-                indexes[3] = tp3;
-                indexes[4] = finish;
-                ++tp2;
             }
+#pragma omp critical
             --tp3;
         }
     }
     return bound;
 }
 
-    static double
-track_frcfd_triangle_plat(const track_t *track, double bound, int *indexes)
-{
+static double
+track_frcfd_triangle_plat(const track_t *track, double bound, int *indexes) {
     indexes[0] = indexes[1] = indexes[2] = indexes[3] = indexes[4] = -1;
+#pragma omp parallel for schedule(dynamic)
     for (int tp1 = 0; tp1 < track->ntrkpts - 1; ++tp1) {
         if (track->sigma_delta[track->ntrkpts - 1] - track->sigma_delta[tp1] < bound)
-            break;
+            continue; //break;
         int start = track->best_start[tp1];
         int finish = track->last_finish[start];
         if (finish < 0 || track->sigma_delta[finish] - track->sigma_delta[tp1] < bound)
@@ -774,6 +747,7 @@ track_frcfd_triangle_plat(const track_t *track, double bound, int *indexes)
             double bound123 = bound - leg31;
             double legs123 = 0.0;
             int tp2 = track_furthest_from2(track, tp1, tp3, tp1 + 1, tp3, bound123, &legs123);
+#pragma omp critical
             if (tp2 > 0) {
                 bound = leg31 + legs123;
                 indexes[0] = start;
@@ -787,18 +761,17 @@ track_frcfd_triangle_plat(const track_t *track, double bound, int *indexes)
     return bound;
 }
 
-    static double
-track_frcfd_circuit_distance(const track_t *track, int n, int *indexes)
-{
+static double
+track_frcfd_circuit_distance(const track_t *track, int n, int *indexes) {
     double distance = track_delta(track, indexes[n - 2], indexes[1]);
+#pragma omp parallel for reduction(+:distance)
     for (int i = 1; i < n - 2; ++i)
         distance += track_delta(track, indexes[i], indexes[i + 1]);
     return R * distance;
 }
 
-    result_t *
-track_optimize_frcfd(track_t *track, int complexity, const declaration_t *declaration)
-{
+result_t *
+track_optimize_frcfd(track_t *track, int complexity, const declaration_t *declaration) {
     static const char *league = "Coupe F\303\251d\303\251rale de Distance (France)";
     result_t *result = result_new();
 
@@ -807,8 +780,9 @@ track_optimize_frcfd(track_t *track, int complexity, const declaration_t *declar
 
     bound = track_open_distance(track, 0.0, indexes);
     if (indexes[0] != -1) {
-        route_t *route = result_push_new_route(result, league, "distance libre sans point de contournement", R * bound, 1.0, 0, 0);
-        const char *names[] = { "BD", "BA" };
+        route_t *route = result_push_new_route(result, league, "distance libre sans point de contournement", R * bound,
+                                               1.0, 0, 0);
+        const char *names[] = {"BD", "BA"};
         route_push_trkpts(route, track->trkpts, 2, indexes, names);
     }
 
@@ -817,8 +791,9 @@ track_optimize_frcfd(track_t *track, int complexity, const declaration_t *declar
 
     bound = track_open_distance1(track, bound, indexes);
     if (indexes[0] != -1) {
-        route_t *route = result_push_new_route(result, league, "distance libre avec un point de contournement", R * bound, 1.0, 0, 0);
-        const char *names[] = { "BD", "B1", "BA" };
+        route_t *route = result_push_new_route(result, league, "distance libre avec un point de contournement",
+                                               R * bound, 1.0, 0, 0);
+        const char *names[] = {"BD", "B1", "BA"};
         route_push_trkpts(route, track->trkpts, 3, indexes, names);
     }
 
@@ -827,8 +802,9 @@ track_optimize_frcfd(track_t *track, int complexity, const declaration_t *declar
 
     bound = track_open_distance2(track, bound, indexes);
     if (indexes[0] != -1) {
-        route_t *route = result_push_new_route(result, league, "distance libre avec deux points de contournement", R * bound, 1.0, 0, 0);
-        const char *names[] = { "BD", "B1", "B2", "BA" };
+        route_t *route = result_push_new_route(result, league, "distance libre avec deux points de contournement",
+                                               R * bound, 1.0, 0, 0);
+        const char *names[] = {"BD", "B1", "B2", "BA"};
         route_push_trkpts(route, track->trkpts, 4, indexes, names);
     }
 
@@ -838,7 +814,7 @@ track_optimize_frcfd(track_t *track, int complexity, const declaration_t *declar
     if (indexes[0] != -1) {
         double distance = track_frcfd_circuit_distance(track, 4, indexes);
         route_t *route = result_push_new_route(result, league, "parcours en aller-retour", distance, 1.2, 1, 0);
-        static const char *names[] = { "BD", "B1", "B2", "BA" };
+        static const char *names[] = {"BD", "B1", "B2", "BA"};
         route_push_trkpts(route, track->trkpts, 4, indexes, names);
     }
 
@@ -849,7 +825,7 @@ track_optimize_frcfd(track_t *track, int complexity, const declaration_t *declar
     if (indexes[0] != -1) {
         double distance = track_frcfd_circuit_distance(track, 5, indexes);
         route_t *route = result_push_new_route(result, league, "triangle FAI", distance, 1.4, 1, 0);
-        static const char *names[] = { "BD", "B1", "B2", "B3", "BA" };
+        static const char *names[] = {"BD", "B1", "B2", "B3", "BA"};
         route_push_trkpts(route, track->trkpts, 5, indexes, names);
     }
 
@@ -857,7 +833,7 @@ track_optimize_frcfd(track_t *track, int complexity, const declaration_t *declar
     if (indexes[0] != -1) {
         double distance = track_frcfd_circuit_distance(track, 5, indexes);
         route_t *route = result_push_new_route(result, league, "triangle plat", distance, 1.2, 1, 0);
-        static const char *names[] = { "BD", "B1", "B2", "B3", "BA" };
+        static const char *names[] = {"BD", "B1", "B2", "B3", "BA"};
         route_push_trkpts(route, track->trkpts, 5, indexes, names);
     }
 
@@ -866,9 +842,8 @@ track_optimize_frcfd(track_t *track, int complexity, const declaration_t *declar
     return result;
 }
 
-    result_t *
-track_optimize_uknxcl(track_t *track, int complexity, const declaration_t *declaration)
-{
+result_t *
+track_optimize_uknxcl(track_t *track, int complexity, const declaration_t *declaration) {
     static const char *league = "UK National XC League";
     result_t *result = result_new();
 
@@ -878,7 +853,7 @@ track_optimize_uknxcl(track_t *track, int complexity, const declaration_t *decla
     bound = track_open_distance(track, 0.0, indexes);
     if (indexes[0] != -1) {
         route_t *route = result_push_new_route(result, league, "open distance", R * bound, 1.0, 0, 0);
-        const char *names[] = { "Start", "Finish" };
+        const char *names[] = {"Start", "Finish"};
         route_push_trkpts(route, track->trkpts, 2, indexes, names);
     }
 
@@ -888,7 +863,7 @@ track_optimize_uknxcl(track_t *track, int complexity, const declaration_t *decla
     bound = track_open_distance1(track, bound, indexes);
     if (indexes[0] != -1) {
         route_t *route = result_push_new_route(result, league, "open distance via a turnpoint", R * bound, 1.0, 0, 0);
-        const char *names[] = { "Start", "TP1", "Finish" };
+        const char *names[] = {"Start", "TP1", "Finish"};
         route_push_trkpts(route, track->trkpts, 3, indexes, names);
     }
 
@@ -897,8 +872,9 @@ track_optimize_uknxcl(track_t *track, int complexity, const declaration_t *decla
 
     bound = track_open_distance2(track, bound, indexes);
     if (indexes[0] != -1) {
-        route_t *route = result_push_new_route(result, league, "open distance via two turnpoints", R * bound, 1.0, 0, 0);
-        const char *names[] = { "Start", "TP1", "TP2", "Finish" };
+        route_t *route = result_push_new_route(result, league, "open distance via two turnpoints", R * bound, 1.0, 0,
+                                               0);
+        const char *names[] = {"Start", "TP1", "TP2", "Finish"};
         route_push_trkpts(route, track->trkpts, 4, indexes, names);
     }
 
@@ -908,7 +884,7 @@ track_optimize_uknxcl(track_t *track, int complexity, const declaration_t *decla
     if (indexes[0] != -1) {
         double distance = track_frcfd_circuit_distance(track, 4, indexes);
         route_t *route = result_push_new_route(result, league, "out and return via a turnpoint", distance, 2.0, 1, 0);
-        static const char *names[] = { "Start", "TP1", "TP2", "Finish" };
+        static const char *names[] = {"Start", "TP1", "TP2", "Finish"};
         route_push_trkpts(route, track->trkpts, 4, indexes, names);
     }
 
@@ -919,24 +895,24 @@ track_optimize_uknxcl(track_t *track, int complexity, const declaration_t *decla
     if (indexes[0] != -1) {
         double distance = track_frcfd_circuit_distance(track, 5, indexes);
         route_t *route = result_push_new_route(result, league, "FAI triangle", distance, 2.5, 1, 0);
-        static const char *names[] = { "Start", "TP1", "TP2", "TP3", "Finish" };
+        static const char *names[] = {"Start", "TP1", "TP2", "TP3", "Finish"};
         route_push_trkpts(route, track->trkpts, 5, indexes, names);
     }
 
     bound = track_frcfd_triangle_plat(track, bound, indexes);
     if (indexes[0] != -1) {
         double distance = track_frcfd_circuit_distance(track, 5, indexes);
-        route_t *route = result_push_new_route(result, league, "out and return via two turnpoints", distance, 2.0, 1, 0);
-        static const char *names[] = { "Start", "TP1", "TP2", "TP3", "Finish" };
+        route_t *route = result_push_new_route(result, league, "out and return via two turnpoints", distance, 2.0, 1,
+                                               0);
+        static const char *names[] = {"Start", "TP1", "TP2", "TP3", "Finish"};
         route_push_trkpts(route, track->trkpts, 5, indexes, names);
     }
 
     return result;
 }
 
-    result_t *
-track_optimize_ukxcl(track_t *track, int complexity, const declaration_t *declaration)
-{
+result_t *
+track_optimize_ukxcl(track_t *track, int complexity, const declaration_t *declaration) {
     static const char *league = "Cross Country League (United Kingdom)";
     result_t *result = result_new();
 
@@ -946,7 +922,7 @@ track_optimize_ukxcl(track_t *track, int complexity, const declaration_t *declar
     bound = track_open_distance(track, 10.0 / R, indexes);
     if (indexes[0] != -1) {
         route_t *route = result_push_new_route(result, league, "open distance", R * bound, 1.0, 0, 0);
-        const char *names[] = { "Start", "Finish" };
+        const char *names[] = {"Start", "Finish"};
         route_push_trkpts(route, track->trkpts, 2, indexes, names);
     }
 
@@ -958,7 +934,7 @@ track_optimize_ukxcl(track_t *track, int complexity, const declaration_t *declar
     bound = track_open_distance3(track, bound, indexes);
     if (indexes[0] != -1) {
         route_t *route = result_push_new_route(result, league, "turnpoint flight", R * bound, 1.0, 0, 0);
-        const char *names[] = { "Start", "TP1", "TP2", "TP3", "Finish" };
+        const char *names[] = {"Start", "TP1", "TP2", "TP3", "Finish"};
         route_push_trkpts(route, track->trkpts, 5, indexes, names);
     }
 
