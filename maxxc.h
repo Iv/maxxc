@@ -112,6 +112,15 @@ typedef struct {
 } turnpoint_t;
 
 typedef struct {
+    double bound;
+    int start;
+    int tp1;
+    int tp2;
+    int tp3;
+    int finish;
+} optimisation_results_t;
+
+typedef struct {
     int nturnpoints;
     int turnpoints_capacity;
     turnpoint_t *turnpoints;

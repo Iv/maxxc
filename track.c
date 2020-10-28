@@ -743,29 +743,63 @@ static double
 track_frcfd_triangle_plat(const track_t *track, double bound, int *indexes) {
     indexes[0] = indexes[1] = indexes[2] = indexes[3] = indexes[4] = -1;
 
-#pragma omp parallel for schedule(dynamic)
-    for (int tp1 = 0; tp1 < track->ntrkpts - 1; ++tp1) {
-        if (track->sigma_delta[track->ntrkpts - 1] - track->sigma_delta[tp1] < bound)
-            continue; //break;
-        int start = track->best_start[tp1];
-        int finish = track->last_finish[start];
-        if (finish < 0 || track->sigma_delta[finish] - track->sigma_delta[tp1] < bound)
-            continue;
-        for (int tp3 = finish; tp3 > tp1 + 1; --tp3) {
-            double leg31 = track_delta(track, tp3, tp1);
-            double bound123 = bound - leg31;
-            double legs123 = 0.0;
-            int tp2 = track_furthest_from2(track, tp1, tp3, tp1 + 1, tp3, bound123, &legs123);
-#pragma omp critical
-            if (tp2 > 0) {
-                bound = leg31 + legs123;
-                indexes[0] = start;
-                indexes[1] = tp1;
-                indexes[2] = tp2;
-                indexes[3] = tp3;
-                indexes[4] = finish;
+    if (track->ntrkpts>0) {
+        optimisation_results_t *res = alloc(track->ntrkpts * sizeof(optimisation_results_t));
+
+
+#pragma omp parallel for shared(res) firstprivate(bound) schedule(dynamic)
+        for (int tp1 = 0; tp1 < track->ntrkpts - 1; ++tp1) {
+
+            if (track->sigma_delta[track->ntrkpts - 1] - track->sigma_delta[tp1] < bound)
+                continue; //break;
+            int start = track->best_start[tp1];
+            int finish = track->last_finish[start];
+
+            if (finish < 0 || track->sigma_delta[finish] - track->sigma_delta[tp1] < bound)
+                continue;
+
+            for (int tp3 = finish; tp3 > tp1 + 1; --tp3) {
+                double leg31 = track_delta(track, tp3, tp1);
+                double bound123 = bound - leg31;
+                double legs123 = 0.0;
+                int tp2 = track_furthest_from2(track, tp1, tp3, tp1 + 1, tp3, bound123, &legs123);
+
+
+//#pragma omp critical
+//                if (tp2 > 0) {
+//                    bound = leg31 + legs123;
+//                    indexes[0] = start;
+//                    indexes[1] = tp1;
+//                    indexes[2] = tp2;
+//                    indexes[3] = tp3;
+//                    indexes[4] = finish;
+//                }
+
+                if(tp2 > 0) {
+                    res[tp1].bound = leg31 + legs123;
+                    res[tp1].start = start;
+                    res[tp1].tp1 = tp1;
+                    res[tp1].tp2 = tp2;
+                    res[tp1].tp3 = tp3;
+                    res[tp1].finish = finish;
+                }
             }
         }
+
+        double max_bound = 0;
+        int best_tp1 = 0;
+        for(int tp1=0; tp1 < track->ntrkpts-1; ++tp1){
+           if (max_bound < res[tp1].bound) {
+               max_bound = res[tp1].bound;
+               best_tp1 = tp1;
+           }
+        }
+        bound = res[best_tp1].bound;
+        indexes[0] = res[best_tp1].start;
+        indexes[1] = res[best_tp1].tp1;
+        indexes[2] = res[best_tp1].tp2;
+        indexes[3] = res[best_tp1].tp3;
+        indexes[4] = res[best_tp1].finish;
     }
     return bound;
 }
