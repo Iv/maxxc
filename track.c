@@ -650,18 +650,22 @@ track_frcfd_triangle_fai(const track_t *track, double bound, int *indexes) {
     double legbound = 0.28 * bound;
 
     int tp1;
+
 #pragma omp parallel for schedule(dynamic)
     for (tp1 = 0; tp1 < track->ntrkpts - 2; ++tp1) {
         int start = track->best_start[tp1];
         int finish = track->last_finish[start];
         if (finish < 0)
             continue;
+
         int tp3first = track_first_at_least(track, tp1, tp1 + 2, finish + 1, legbound);
         if (tp3first < 0)
             continue;
+
         int tp3last = track_last_at_least(track, tp1, tp3first, finish + 1, legbound);
         if (tp3last < 0)
             continue;
+
         int tp3;
         for (tp3 = tp3last; tp3 >= tp3first;) {
             double leg3 = track_delta(track, tp3, tp1);
@@ -680,7 +684,10 @@ track_frcfd_triangle_fai(const track_t *track, double bound, int *indexes) {
                 --tp3;
                 continue;
             }
-            double longestlegbound = 0.44 * leg3 / 0.28;
+
+            double longestlegbound;
+            longestlegbound = 0.44 * leg3 / 0.28;
+
             int tp2;
             for (tp2 = tp2first; tp2 <= tp2last;) {
                 double d = 0.0;
@@ -698,6 +705,7 @@ track_frcfd_triangle_fai(const track_t *track, double bound, int *indexes) {
                     tp2 = track_fast_forward(track, tp2, d);
                     continue;
                 }
+
                 double total = leg1 + leg2 + leg3;
                 double thislegbound = 0.28 * total;
                 if (leg1 < thislegbound)
@@ -710,7 +718,8 @@ track_frcfd_triangle_fai(const track_t *track, double bound, int *indexes) {
                     tp2 = track_fast_forward(track, tp2, 0.5 * d);
                     continue;
                 }
-#pragma omp critical
+
+#pragma omp critical(maxvalue)
                 if (total < bound) {
                     tp2 = track_fast_forward(track, tp2, 0.5 * (bound - total));
                 } else {
@@ -733,6 +742,7 @@ track_frcfd_triangle_fai(const track_t *track, double bound, int *indexes) {
 static double
 track_frcfd_triangle_plat(const track_t *track, double bound, int *indexes) {
     indexes[0] = indexes[1] = indexes[2] = indexes[3] = indexes[4] = -1;
+
 #pragma omp parallel for schedule(dynamic)
     for (int tp1 = 0; tp1 < track->ntrkpts - 1; ++tp1) {
         if (track->sigma_delta[track->ntrkpts - 1] - track->sigma_delta[tp1] < bound)
