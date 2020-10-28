@@ -724,7 +724,6 @@ track_frcfd_triangle_fai(const track_t *track, double bound, int *indexes) {
                     ++tp2;
                 }
             }
-#pragma omp critical
             --tp3;
         }
     }
