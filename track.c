@@ -650,81 +650,84 @@ track_frcfd_triangle_fai(const track_t *track, double bound, int *indexes) {
     double legbound = 0.28 * bound;
 
     int tp1;
-#pragma omp parallel for schedule(dynamic)
-    for (tp1 = 0; tp1 < track->ntrkpts - 2; ++tp1) {
-        int start = track->best_start[tp1];
-        int finish = track->last_finish[start];
-        if (finish < 0)
-            continue;
-        int tp3first = track_first_at_least(track, tp1, tp1 + 2, finish + 1, legbound);
-        if (tp3first < 0)
-            continue;
-        int tp3last = track_last_at_least(track, tp1, tp3first, finish + 1, legbound);
-        if (tp3last < 0)
-            continue;
-        int tp3;
-        for (tp3 = tp3last; tp3 >= tp3first;) {
-            double leg3 = track_delta(track, tp3, tp1);
-            if (leg3 < legbound) {
-                tp3 = track_fast_backward(track, tp3, legbound - leg3);
+#pragma omp parallel
+    {
+#pragma omp for nowait
+        for (tp1 = 0; tp1 < track->ntrkpts - 2; ++tp1) {
+            int start = track->best_start[tp1];
+            int finish = track->last_finish[start];
+            if (finish < 0)
                 continue;
-            }
-            double shortestlegbound = 0.28 * leg3 / 0.44;
-            int tp2first = track_first_at_least(track, tp1, tp1 + 1, tp3 - 1, shortestlegbound);
-            if (tp2first < 0) {
-                --tp3;
+            int tp3first = track_first_at_least(track, tp1, tp1 + 2, finish + 1, legbound);
+            if (tp3first < 0)
                 continue;
-            }
-            int tp2last = track_last_at_least(track, tp3, tp2first, tp3, shortestlegbound);
-            if (tp2last < 0) {
-                --tp3;
+            int tp3last = track_last_at_least(track, tp1, tp3first, finish + 1, legbound);
+            if (tp3last < 0)
                 continue;
-            }
-            double longestlegbound = 0.44 * leg3 / 0.28;
-            int tp2;
-            for (tp2 = tp2first; tp2 <= tp2last;) {
-                double d = 0.0;
-                double leg1 = track_delta(track, tp1, tp2);
-                if (leg1 < shortestlegbound)
-                    d = shortestlegbound - leg1;
-                if (leg1 > longestlegbound && leg1 - longestlegbound > d)
-                    d = leg1 - longestlegbound;
-                double leg2 = track_delta(track, tp2, tp3);
-                if (leg2 < shortestlegbound && shortestlegbound - leg2 > d)
-                    d = shortestlegbound - leg2;
-                if (leg2 > longestlegbound && leg2 - longestlegbound > d)
-                    d = leg2 - longestlegbound;
-                if (d > 0.0) {
-                    tp2 = track_fast_forward(track, tp2, d);
+            int tp3;
+            for (tp3 = tp3last; tp3 >= tp3first;) {
+                double leg3 = track_delta(track, tp3, tp1);
+                if (leg3 < legbound) {
+                    tp3 = track_fast_backward(track, tp3, legbound - leg3);
                     continue;
                 }
-                double total = leg1 + leg2 + leg3;
-                double thislegbound = 0.28 * total;
-                if (leg1 < thislegbound)
-                    d = thislegbound - leg1;
-                if (leg2 < thislegbound && thislegbound - leg2 > d)
-                    d = thislegbound - leg2;
-                if (leg3 < thislegbound && thislegbound - leg3 > d)
-                    d = thislegbound - leg3;
-                if (d > 0.0) {
-                    tp2 = track_fast_forward(track, tp2, 0.5 * d);
+                double shortestlegbound = 0.28 * leg3 / 0.44;
+                int tp2first = track_first_at_least(track, tp1, tp1 + 1, tp3 - 1, shortestlegbound);
+                if (tp2first < 0) {
+                    --tp3;
                     continue;
                 }
+                int tp2last = track_last_at_least(track, tp3, tp2first, tp3, shortestlegbound);
+                if (tp2last < 0) {
+                    --tp3;
+                    continue;
+                }
+                double longestlegbound = 0.44 * leg3 / 0.28;
+                int tp2;
+                for (tp2 = tp2first; tp2 <= tp2last;) {
+                    double d = 0.0;
+                    double leg1 = track_delta(track, tp1, tp2);
+                    if (leg1 < shortestlegbound)
+                        d = shortestlegbound - leg1;
+                    if (leg1 > longestlegbound && leg1 - longestlegbound > d)
+                        d = leg1 - longestlegbound;
+                    double leg2 = track_delta(track, tp2, tp3);
+                    if (leg2 < shortestlegbound && shortestlegbound - leg2 > d)
+                        d = shortestlegbound - leg2;
+                    if (leg2 > longestlegbound && leg2 - longestlegbound > d)
+                        d = leg2 - longestlegbound;
+                    if (d > 0.0) {
+                        tp2 = track_fast_forward(track, tp2, d);
+                        continue;
+                    }
+                    double total = leg1 + leg2 + leg3;
+                    double thislegbound = 0.28 * total;
+                    if (leg1 < thislegbound)
+                        d = thislegbound - leg1;
+                    if (leg2 < thislegbound && thislegbound - leg2 > d)
+                        d = thislegbound - leg2;
+                    if (leg3 < thislegbound && thislegbound - leg3 > d)
+                        d = thislegbound - leg3;
+                    if (d > 0.0) {
+                        tp2 = track_fast_forward(track, tp2, 0.5 * d);
+                        continue;
+                    }
 #pragma omp critical
-                if (total < bound) {
-                    tp2 = track_fast_forward(track, tp2, 0.5 * (bound - total));
-                } else {
-                    bound = total;
-                    legbound = thislegbound;
-                    indexes[0] = start;
-                    indexes[1] = tp1;
-                    indexes[2] = tp2;
-                    indexes[3] = tp3;
-                    indexes[4] = finish;
-                    ++tp2;
+                    if (total < bound) {
+                        tp2 = track_fast_forward(track, tp2, 0.5 * (bound - total));
+                    } else {
+                        bound = total;
+                        legbound = thislegbound;
+                        indexes[0] = start;
+                        indexes[1] = tp1;
+                        indexes[2] = tp2;
+                        indexes[3] = tp3;
+                        indexes[4] = finish;
+                        ++tp2;
+                    }
                 }
+                --tp3;
             }
-            --tp3;
         }
     }
     return bound;
